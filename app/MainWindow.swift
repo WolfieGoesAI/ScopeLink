@@ -105,7 +105,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
                 t.font = NSFont.systemFont(ofSize: it.size ?? 11, weight: (it.bold ?? false) ? .semibold : .regular)
                 t.textColor = .secondaryLabelColor
                 t.lineBreakMode = .byClipping
-                t.frame = frame
+                // Keep the designed top-left corner, but never cut the text: the box grows to fit it.
+                let fit = t.intrinsicContentSize
+                t.frame = NSRect(x: frame.minX, y: frame.minY, width: max(frame.width, ceil(fit.width)), height: max(frame.height, ceil(fit.height)))
                 t.isHidden = it.hidden ?? false
                 canvas.addSubview(t)
                 extraLabels.append(t)

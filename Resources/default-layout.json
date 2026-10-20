@@ -116,7 +116,7 @@
    "label": "Single",
    "w": 88,
    "x": 896,
-   "y": 288
+   "y": 280
   },
   {
    "h": 24,
@@ -124,7 +124,7 @@
    "label": "Channel",
    "w": 88,
    "x": 768,
-   "y": 288
+   "y": 280
   },
   {
    "h": 24,
@@ -132,7 +132,7 @@
    "label": "Math",
    "w": 88,
    "x": 768,
-   "y": 248
+   "y": 240
   },
   {
    "h": 24,
@@ -140,7 +140,7 @@
    "label": "Measure",
    "w": 88,
    "x": 768,
-   "y": 208
+   "y": 200
   },
   {
    "h": 24,
@@ -156,7 +156,7 @@
    "label": "Display",
    "w": 88,
    "x": 768,
-   "y": 168
+   "y": 160
   },
   {
    "h": 24,
@@ -164,7 +164,7 @@
    "label": "Trigger",
    "w": 88,
    "x": 896,
-   "y": 168
+   "y": 160
   },
   {
    "h": 24,
@@ -172,7 +172,7 @@
    "label": "Horizontal",
    "w": 88,
    "x": 896,
-   "y": 208
+   "y": 200
   },
   {
    "h": 24,
@@ -180,7 +180,7 @@
    "label": "Record",
    "w": 88,
    "x": 896,
-   "y": 248
+   "y": 240
   },
   {
    "h": 24,
@@ -196,7 +196,7 @@
    "label": "Shift",
    "w": 88,
    "x": 896,
-   "y": 328
+   "y": 320
   },
   {
    "h": 24,
@@ -204,7 +204,7 @@
    "label": "Select",
    "w": 88,
    "x": 768,
-   "y": 328
+   "y": 320
   },
   {
    "h": 24,
@@ -212,7 +212,7 @@
    "label": "OK",
    "w": 56,
    "x": 848,
-   "y": 416
+   "y": 408
   },
   {
    "h": 24,
@@ -220,7 +220,7 @@
    "label": "▲",
    "w": 56,
    "x": 848,
-   "y": 384
+   "y": 376
   },
   {
    "h": 24,
@@ -228,7 +228,7 @@
    "label": "◀",
    "w": 56,
    "x": 784,
-   "y": 416
+   "y": 408
   },
   {
    "h": 24,
@@ -236,7 +236,7 @@
    "label": "▶",
    "w": 56,
    "x": 912,
-   "y": 416
+   "y": 408
   },
   {
    "h": 24,
@@ -244,7 +244,7 @@
    "label": "▼",
    "w": 56,
    "x": 848,
-   "y": 448
+   "y": 440
   },
   {
    "h": 24,
@@ -277,6 +277,127 @@
    "w": 56,
    "x": 920,
    "y": 528
+  },
+  {
+   "bold": false,
+   "h": 12,
+   "id": "label.custom1",
+   "size": 10,
+   "text": "Configure",
+   "type": "label",
+   "w": 60,
+   "x": 792,
+   "y": 184
+  },
+  {
+   "bold": false,
+   "h": 16,
+   "id": "label.custom2",
+   "size": 10,
+   "text": "Cursor",
+   "type": "label",
+   "w": 56,
+   "x": 800,
+   "y": 224
+  },
+  {
+   "bold": false,
+   "h": 12,
+   "id": "label.custom3",
+   "size": 10,
+   "text": "Status",
+   "type": "label",
+   "w": 40,
+   "x": 800,
+   "y": 264
+  },
+  {
+   "bold": false,
+   "h": 16,
+   "id": "label.custom4",
+   "size": 10,
+   "text": "Storage",
+   "type": "label",
+   "w": 44,
+   "x": 928,
+   "y": 264
+  },
+  {
+   "bold": false,
+   "h": 12,
+   "id": "label.custom5",
+   "size": 10,
+   "text": "Ref",
+   "type": "label",
+   "w": 24,
+   "x": 936,
+   "y": 304
+  },
+  {
+   "bold": false,
+   "h": 12,
+   "id": "label.custom6",
+   "size": 10,
+   "text": "Help",
+   "type": "label",
+   "w": 28,
+   "x": 928,
+   "y": 224
+  },
+  {
+   "bold": false,
+   "h": 12,
+   "id": "label.custom7",
+   "size": 10,
+   "text": "Utility",
+   "type": "label",
+   "w": 32,
+   "x": 928,
+   "y": 184
+  },
+  {
+   "bold": false,
+   "h": 12,
+   "id": "label.custom8",
+   "size": 10,
+   "text": "V",
+   "type": "label",
+   "w": 12,
+   "x": 860,
+   "y": 128
+  },
+  {
+   "bold": false,
+   "h": 12,
+   "id": "label.custom9",
+   "size": 10,
+   "text": "I",
+   "type": "label",
+   "w": 12,
+   "x": 860,
+   "y": 168
+  },
+  {
+   "bold": false,
+   "h": 12,
+   "id": "label.custom10",
+   "size": 10,
+   "text": "R",
+   "type": "label",
+   "w": 12,
+   "x": 860,
+   "y": 208
+  },
+  {
+   "bold": true,
+   "h": 8,
+   "id": "label.custom11",
+   "size": 10,
+   "text": "*",
+   "type": "label",
+   "w": 16,
+   "x": 812,
+   "y": 146
   }
  ]
 }
