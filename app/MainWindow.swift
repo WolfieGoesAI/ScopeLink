@@ -94,25 +94,24 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         ])
         grid.rowSpacing = 4
         grid.columnSpacing = 6
-        let empty1 = NSGridCell.emptyContentView, empty2 = NSGridCell.emptyContentView
-        let empty3 = NSGridCell.emptyContentView, empty4 = NSGridCell.emptyContentView
-        let empty5 = NSGridCell.emptyContentView
-        let arrows = NSGridView(views: [
-            [empty1, keyButton("▲", 0x12, width: 50), empty2],
-            [keyButton("◀", 0x14, width: 50), empty5, keyButton("▶", 0x15, width: 50)],
-            [empty3, keyButton("▼", 0x13, width: 50), empty4],
-        ])
-        arrows.rowSpacing = 2
-        arrows.columnSpacing = 2
-        for c in 0..<3 { arrows.column(at: c).width = 50 }
-        for r in 0..<3 { arrows.row(at: r).height = 24 }
+        // Arrow cross: four buttons placed explicitly in a fixed-size box
+        let arrows = NSView()
         arrows.translatesAutoresizingMaskIntoConstraints = false
-        arrows.widthAnchor.constraint(equalToConstant: 3 * 50 + 2 * 2).isActive = true
-        arrows.heightAnchor.constraint(equalToConstant: 3 * 24 + 2 * 2).isActive = true
-        arrows.xPlacement = .center
-        arrows.yPlacement = .center
-        for c in 0..<3 { grid.column(at: c).width = 92 }
-        for r in 0..<grid.numberOfRows { grid.row(at: r).height = 22 }
+        let up = keyButton("▲", 0x12, width: 50), down = keyButton("▼", 0x13, width: 50)
+        let left = keyButton("◀", 0x14, width: 50), right = keyButton("▶", 0x15, width: 50)
+        for b in [up, down, left, right] { arrows.addSubview(b) }
+        NSLayoutConstraint.activate([
+            arrows.widthAnchor.constraint(equalToConstant: 160),
+            arrows.heightAnchor.constraint(equalToConstant: 80),
+            up.centerXAnchor.constraint(equalTo: arrows.centerXAnchor),
+            up.topAnchor.constraint(equalTo: arrows.topAnchor),
+            down.centerXAnchor.constraint(equalTo: arrows.centerXAnchor),
+            down.bottomAnchor.constraint(equalTo: arrows.bottomAnchor),
+            left.leadingAnchor.constraint(equalTo: arrows.leadingAnchor),
+            left.centerYAnchor.constraint(equalTo: arrows.centerYAnchor),
+            right.trailingAnchor.constraint(equalTo: arrows.trailingAnchor),
+            right.centerYAnchor.constraint(equalTo: arrows.centerYAnchor),
+        ])
         let volts = NSStackView(views: [keyButton("V", 0x08, width: 60), keyButton("mV", 0x09, width: 60)])
         let time = NSStackView(views: [keyButton("s", 0x0A, width: 60), keyButton("ns", 0x0B, width: 60)])
         let panel = NSStackView(views: [sectionLabel("FRONT PANEL"), grid,
