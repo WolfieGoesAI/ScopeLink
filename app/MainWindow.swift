@@ -106,6 +106,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         arrows.columnSpacing = 2
         for c in 0..<3 { arrows.column(at: c).width = 50 }
         for r in 0..<3 { arrows.row(at: r).height = 24 }
+        arrows.translatesAutoresizingMaskIntoConstraints = false
+        arrows.widthAnchor.constraint(equalToConstant: 3 * 50 + 2 * 2).isActive = true
+        arrows.heightAnchor.constraint(equalToConstant: 3 * 24 + 2 * 2).isActive = true
         arrows.xPlacement = .center
         arrows.yPlacement = .center
         for c in 0..<3 { grid.column(at: c).width = 92 }
