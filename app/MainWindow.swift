@@ -1,0 +1,324 @@
+import Cocoa
+
+final class MainWindowController: NSWindowController, NSWindowDelegate {
+    let scope = ScopeController()
+    let screenView = ScreenView()
+    private let statusLabel = NSTextField(labelWithString: "Not connected")
+    private let statusDot = NSTextField(labelWithString: "●")
+    private let liveCheck = NSButton(checkboxWithTitle: "Live view", target: nil, action: nil)
+    private let connectButton = NSButton(title: "Connect", target: nil, action: nil)
+    private let modelPopup = NSPopUpButton(frame: .zero, pullsDown: false)
+    private var connected = false
+    private var keyButtons: [NSButton] = []
+    var waveWindow: WaveWindowController?
+
+    init() {
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1060, height: 600),
+                         styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        w.title = "ScopeLink"
+        w.minSize = NSSize(width: 900, height: 470)
+        super.init(window: w)
+        w.delegate = self
+        buildUI()
+        w.setFrameAutosaveName("MainWindow")
+        if !w.setFrameUsingName("MainWindow") { w.center() }
+        wire()
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    // MARK: UI
+
+    private func keyButton(_ title: String, _ key: Int32, width: CGFloat = 92) -> NSButton {
+        let b = NSButton(title: title, target: self, action: #selector(keyPressed(_:)))
+        b.tag = Int(key)
+        b.bezelStyle = .rounded
+        b.translatesAutoresizingMaskIntoConstraints = false
+        b.widthAnchor.constraint(equalToConstant: width).isActive = true
+        if let name = utd_key_name(key) { b.toolTip = "Sends the \(String(cString: name)) key to the scope" }
+        keyButtons.append(b)
+        return b
+    }
+
+    private func sectionLabel(_ s: String) -> NSTextField {
+        let l = NSTextField(labelWithString: s)
+        l.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        l.textColor = .secondaryLabelColor
+        return l
+    }
+
+    private func buildUI() {
+        guard let content = window?.contentView else { return }
+
+        // Top bar
+        connectButton.target = self
+        connectButton.action = #selector(toggleConnect(_:))
+        connectButton.bezelStyle = .rounded
+        liveCheck.target = self
+        liveCheck.action = #selector(toggleLive(_:))
+        let shotButton = NSButton(title: "Save Screenshot…", target: self, action: #selector(saveScreenshot(_:)))
+        let waveButton = NSButton(title: "Waveform…", target: self, action: #selector(showWaveform(_:)))
+        modelPopup.addItems(withTitles: ["UTD1052DL (2 channels)", "UTD1000CL (1 channel)"])
+        modelPopup.target = self
+        modelPopup.action = #selector(modelChanged(_:))
+        modelPopup.toolTip = "Which model is connected; this sets the size of the waveform request"
+        statusDot.textColor = .systemRed
+        statusLabel.lineBreakMode = .byTruncatingTail
+        statusLabel.textColor = .secondaryLabelColor
+        statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        let top = NSStackView(views: [connectButton, liveCheck, shotButton, waveButton, modelPopup, statusDot, statusLabel])
+        top.orientation = .horizontal
+        top.spacing = 10
+        top.setCustomSpacing(4, after: statusDot)
+
+        // Screen + F1–F4 (the scope has its menu keys beside the screen)
+        screenView.translatesAutoresizingMaskIntoConstraints = false
+        screenView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        screenView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        screenView.widthAnchor.constraint(equalTo: screenView.heightAnchor, multiplier: 4.0 / 3.0).isActive = true
+        screenView.widthAnchor.constraint(greaterThanOrEqualToConstant: 480).isActive = true
+        let fKeys = NSStackView(views: [keyButton("F1", 0x18, width: 56), keyButton("F2", 0x19, width: 56),
+                                        keyButton("F3", 0x1A, width: 56), keyButton("F4", 0x1B, width: 56)])
+        fKeys.orientation = .vertical
+        fKeys.distribution = .equalSpacing
+        fKeys.spacing = 40
+
+        // Front panel
+        let grid = NSGridView(views: [
+            [keyButton("Run/Stop", 0x0C), keyButton("Auto", 0x17), keyButton("Single", 0x10)],
+            [keyButton("CH1", 0x06), keyButton("Math", 0x0E), keyButton("Measure", 0x02)],
+            [keyButton("Acquire", 0x1D), keyButton("Display", 0x0D), keyButton("Trigger", 0x11)],
+            [keyButton("Horizontal", 0x00), keyButton("Record", 0x0F), keyButton("DSO/DMM", 0x1C)],
+            [keyButton("Shift", 0x01), keyButton("Select", 0x07), keyButton("OK", 0x16)],
+        ])
+        grid.rowSpacing = 4
+        grid.columnSpacing = 6
+        let empty1 = NSGridCell.emptyContentView, empty2 = NSGridCell.emptyContentView
+        let empty3 = NSGridCell.emptyContentView, empty4 = NSGridCell.emptyContentView
+        let empty5 = NSGridCell.emptyContentView
+        let arrows = NSGridView(views: [
+            [empty1, keyButton("▲", 0x12, width: 50), empty2],
+            [keyButton("◀", 0x14, width: 50), empty5, keyButton("▶", 0x15, width: 50)],
+            [empty3, keyButton("▼", 0x13, width: 50), empty4],
+        ])
+        arrows.rowSpacing = 2
+        arrows.columnSpacing = 2
+        let volts = NSStackView(views: [keyButton("V", 0x08, width: 60), keyButton("mV", 0x09, width: 60)])
+        let time = NSStackView(views: [keyButton("s", 0x0A, width: 60), keyButton("ns", 0x0B, width: 60)])
+        let panel = NSStackView(views: [sectionLabel("FRONT PANEL"), grid,
+                                        sectionLabel("CURSOR / POSITION"), arrows,
+                                        sectionLabel("VOLTS/DIV"), volts,
+                                        sectionLabel("TIME/DIV"), time])
+        panel.orientation = .vertical
+        panel.alignment = .leading
+        panel.spacing = 6
+        panel.setCustomSpacing(14, after: grid)
+        panel.setCustomSpacing(14, after: arrows)
+        panel.setCustomSpacing(14, after: volts)
+
+        let main = NSStackView(views: [screenView, fKeys, panel])
+        main.orientation = .horizontal
+        main.alignment = .top
+        main.spacing = 14
+
+        let root = NSStackView(views: [top, main])
+        root.orientation = .vertical
+        root.alignment = .leading
+        root.spacing = 12
+        root.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 14, right: 14)
+        root.translatesAutoresizingMaskIntoConstraints = false
+        content.addSubview(root)
+        NSLayoutConstraint.activate([
+            root.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            root.trailingAnchor.constraint(equalTo: content.trailingAnchor),
+            root.topAnchor.constraint(equalTo: content.topAnchor),
+            root.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+            main.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -14),
+            top.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -14),
+            fKeys.heightAnchor.constraint(equalTo: screenView.heightAnchor, multiplier: 0.8),
+        ])
+        let fill = screenView.heightAnchor.constraint(equalTo: main.heightAnchor)
+        fill.priority = .defaultHigh
+        fill.isActive = true
+        let fillRoot = main.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -14)
+        fillRoot.priority = .defaultHigh
+        fillRoot.isActive = true
+    }
+
+    private func wire() {
+        let d = UserDefaults.standard
+        scope.singleChannel = d.bool(forKey: "singleChannel")
+        scope.paletteBGR = !d.bool(forKey: "paletteRGB")
+        modelPopup.selectItem(at: scope.singleChannel ? 1 : 0)
+
+        scope.onFrame = { [weak self] img, _ in self?.screenView.image = img }
+        scope.onStatus = { [weak self] ok, msg in self?.setStatus(ok, msg) }
+    }
+
+    private func setStatus(_ ok: Bool, _ msg: String) {
+        connected = ok
+        statusLabel.stringValue = msg
+        statusLabel.toolTip = msg
+        statusDot.textColor = ok ? .systemGreen : .systemRed
+        connectButton.title = ok ? "Disconnect" : "Connect"
+        if !ok { screenView.placeholder = liveCheck.state == .on ? "Waiting for the oscilloscope…" : "Not connected" }
+        if !ok && liveCheck.state == .off { screenView.image = nil }
+    }
+
+    // MARK: actions
+
+    @objc func toggleConnect(_ sender: Any?) {
+        if connected {
+            liveCheck.state = .off
+            scope.disconnect()
+        } else {
+            scope.connect()
+            scope.refreshScreen()
+        }
+    }
+
+    @objc func toggleLive(_ sender: Any?) {
+        if let b = sender as? NSMenuItem, b.tag == 1 { liveCheck.state = liveCheck.state == .on ? .off : .on }
+        let on = liveCheck.state == .on
+        if on && !connected { screenView.placeholder = "Waiting for the oscilloscope…" }
+        scope.setLive(on)
+    }
+
+    var isLive: Bool { return liveCheck.state == .on }
+
+    @objc func keyPressed(_ sender: NSButton) {
+        scope.press(key: sender.tag)
+    }
+
+    @objc func modelChanged(_ sender: Any?) {
+        scope.singleChannel = modelPopup.indexOfSelectedItem == 1
+        UserDefaults.standard.set(scope.singleChannel, forKey: "singleChannel")
+    }
+
+    @objc func toggleSwapColors(_ sender: Any?) {
+        scope.paletteBGR.toggle()
+        UserDefaults.standard.set(!scope.paletteBGR, forKey: "paletteRGB")
+        if connected && !isLive { scope.refreshScreen() }
+    }
+
+    static func timestamp() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyyMMdd-HHmmss"
+        return f.string(from: Date())
+    }
+
+    @objc func saveScreenshot(_ sender: Any?) {
+        scope.captureScreen { [weak self] rgb in
+            guard let self = self, let window = self.window else { return }
+            guard let rgb = rgb else {
+                self.alert("No screenshot", "The oscilloscope is not connected or did not answer.")
+                return
+            }
+            let panel = NSSavePanel()
+            panel.allowedFileTypes = ["png"]
+            panel.nameFieldStringValue = "scope-\(MainWindowController.timestamp()).png"
+            panel.beginSheetModal(for: window) { resp in
+                guard resp == .OK, let url = panel.url else { return }
+                let ok = rgb.withUnsafeBufferPointer { b -> Bool in
+                    return utd_write_png(url.path, b.baseAddress, Int32(ScopeController.width), Int32(ScopeController.height)) == 0
+                }
+                gLogSink?(ok ? "Saved \(url.path)" : "Could not save \(url.path)")
+                if !ok { self.alert("Could not save", url.path) }
+            }
+        }
+    }
+
+    @objc func showWaveform(_ sender: Any?) {
+        if waveWindow == nil { waveWindow = WaveWindowController(scope: scope) }
+        waveWindow?.showWindow(nil)
+        waveWindow?.capture(nil)
+    }
+
+    func alert(_ title: String, _ text: String) {
+        let a = NSAlert()
+        a.messageText = title
+        a.informativeText = text
+        if let w = window { a.beginSheetModal(for: w, completionHandler: nil) } else { a.runModal() }
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        NSApp.terminate(nil)
+    }
+}
+
+final class WaveWindowController: NSWindowController {
+    private let scope: ScopeController
+    private let view = WaveView()
+    private var last: WaveCapture?
+    private let info = NSTextField(labelWithString: "")
+
+    init(scope: ScopeController) {
+        self.scope = scope
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 420),
+                         styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: true)
+        w.title = "Waveform"
+        super.init(window: w)
+        w.setFrameAutosaveName("WaveWindow")
+        let captureButton = NSButton(title: "Capture", target: self, action: #selector(capture(_:)))
+        captureButton.keyEquivalent = "\r"
+        let saveButton = NSButton(title: "Save CSV…", target: self, action: #selector(saveCSV(_:)))
+        info.textColor = .secondaryLabelColor
+        info.lineBreakMode = .byTruncatingTail
+        let bar = NSStackView(views: [captureButton, saveButton, info])
+        bar.spacing = 10
+        view.translatesAutoresizingMaskIntoConstraints = false
+        let root = NSStackView(views: [bar, view])
+        root.orientation = .vertical
+        root.alignment = .leading
+        root.edgeInsets = NSEdgeInsets(top: 10, left: 12, bottom: 12, right: 12)
+        root.translatesAutoresizingMaskIntoConstraints = false
+        let c = w.contentView!
+        c.addSubview(root)
+        NSLayoutConstraint.activate([
+            root.leadingAnchor.constraint(equalTo: c.leadingAnchor),
+            root.trailingAnchor.constraint(equalTo: c.trailingAnchor),
+            root.topAnchor.constraint(equalTo: c.topAnchor),
+            root.bottomAnchor.constraint(equalTo: c.bottomAnchor),
+            view.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 12),
+            view.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -12),
+            view.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
+        ])
+        if !w.setFrameUsingName("WaveWindow") { w.center() }
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    @objc func capture(_ sender: Any?) {
+        info.stringValue = "Capturing…"
+        scope.captureWave { [weak self] cap in
+            guard let self = self else { return }
+            guard let cap = cap else {
+                self.info.stringValue = "No waveform – the oscilloscope is not connected or did not answer."
+                return
+            }
+            self.last = cap
+            var chans: [[UInt8]] = [], labels: [String] = []
+            for k in 0..<cap.channelCount {
+                chans.append(cap.samples(k))
+                labels.append("CH\(k + 1) \(cap.enabled(k) ? "on" : "off")  volts idx \(cap.voltsIndex(k))  \(cap.samples(k).count) samples")
+            }
+            self.view.channels = chans
+            self.view.labels = labels
+            self.info.stringValue = "\(cap.bytes) bytes received at \(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)). Raw codes 0–255; scaling to volts is not decoded yet."
+        }
+    }
+
+    @objc func saveCSV(_ sender: Any?) {
+        guard let cap = last, let w = window else {
+            info.stringValue = "Capture a waveform first."
+            return
+        }
+        let panel = NSSavePanel()
+        panel.allowedFileTypes = ["csv"]
+        panel.nameFieldStringValue = "wave-\(MainWindowController.timestamp()).csv"
+        panel.beginSheetModal(for: w) { resp in
+            guard resp == .OK, let url = panel.url else { return }
+            let ok = cap.writeCSV(to: url.path)
+            gLogSink?(ok ? "Saved \(url.path)" : "Could not save \(url.path)")
+            self.info.stringValue = ok ? "Saved \(url.lastPathComponent)" : "Could not save \(url.path)"
+        }
+    }
+}

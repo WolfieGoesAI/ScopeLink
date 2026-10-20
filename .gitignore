@@ -1,0 +1,4 @@
+build/
+dist/
+diag*.txt
+.DS_Store

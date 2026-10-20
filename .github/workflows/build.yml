@@ -1,0 +1,74 @@
+name: Build ScopeLink
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        env:
+          APP_VERSION: 0.1.${{ github.run_number }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: bash scripts/build.sh
+
+      - name: Report errors
+        if: failure()
+        run: |
+          for f in diag-swift.txt diag.txt; do
+            [ -f "$f" ] || continue
+            python3 - "$f" <<'PY'
+          import sys
+          d = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+          for k, c in enumerate([d[i:i + 3500] for i in range(0, len(d), 3500)][:20]):
+              c = c.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+              print(f"::error title={sys.argv[1]} part {k}::{c}")
+          PY
+          done
+
+      - name: Screenshot of the app
+        continue-on-error: true
+        run: |
+          open build/ScopeLink.app
+          sleep 8
+          screencapture -x dist/screenshot.png || true
+          osascript -e 'tell application "ScopeLink" to quit' || true
+          ls -la dist
+
+      - name: Publish screenshot
+        if: hashFiles('dist/screenshot.png') != ''
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/shot && cp dist/screenshot.png /tmp/shot/
+          cd /tmp/shot
+          git init -q -b screenshots
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add screenshot.png
+          git commit -q -m "Screenshot of ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" screenshots
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScopeLink
+          path: dist/ScopeLink-mac.zip
+
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="0.1.${{ github.run_number }}"
+          gh release create "v$V" dist/ScopeLink-mac.zip "dist/ScopeLink-$V.zip" \
+            --repo "${{ github.repository }}" --target "$GITHUB_SHA" --latest \
+            --title "ScopeLink $V" \
+            --notes "Download **ScopeLink-mac.zip**, unzip it and move ScopeLink.app to Applications. The first time, right-click the app and choose Open (it is not signed with an Apple developer certificate). Runs on macOS 10.14.4 Mojave or newer, Intel and Apple silicon. The zip also contains the \`scopelink\` command-line tool."
