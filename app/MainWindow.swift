@@ -3,168 +3,141 @@ import Cocoa
 final class MainWindowController: NSWindowController, NSWindowDelegate {
     let scope = ScopeController()
     let screenView = ScreenView()
-    private let statusLabel = NSTextField(labelWithString: "Not connected")
-    private let statusDot = NSTextField(labelWithString: "●")
+    private let statusView = StatusView(frame: .zero)
+    private var statusLabel: NSTextField { return statusView.label }
     private let liveCheck = NSButton(checkboxWithTitle: "Live view", target: nil, action: nil)
-    private let connectButton = NSButton(title: "Connect", target: nil, action: nil)
+    private let connectButton = KeyButton(frame: .zero)
+    private let shotButton = KeyButton(frame: .zero)
+    private let waveButton = KeyButton(frame: .zero)
     private let modelPopup = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let canvas = LayoutCanvas(frame: .zero)
     private var connected = false
-    private var keyButtons: [NSButton] = []
+    private var keyButtons: [String: KeyButton] = [:]
+    private var extraLabels: [NSTextField] = []
+    private(set) var layout = Layout.builtIn
     var waveWindow: WaveWindowController?
+
+    static let keyCodes: [String: Int32] = [
+        "key.run": 0x0C, "key.auto": 0x17, "key.single": 0x10, "key.ch1": 0x06, "key.math": 0x0E,
+        "key.measure": 0x02, "key.acquire": 0x1D, "key.display": 0x0D, "key.trigger": 0x11,
+        "key.horizontal": 0x00, "key.record": 0x0F, "key.dso": 0x1C, "key.shift": 0x01,
+        "key.select": 0x07, "key.ok": 0x16, "key.up": 0x12, "key.down": 0x13, "key.left": 0x14,
+        "key.right": 0x15, "key.volts-v": 0x08, "key.volts-mv": 0x09, "key.time-s": 0x0A,
+        "key.time-ns": 0x0B, "key.f1": 0x18, "key.f2": 0x19, "key.f3": 0x1A, "key.f4": 0x1B,
+    ]
 
     init() {
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1120, height: 600),
                          styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         w.title = "ScopeLink"
-        w.minSize = NSSize(width: 1000, height: 480)
         super.init(window: w)
         w.delegate = self
-        buildUI()
-        w.setFrameAutosaveName("MainWindow2")
-        if !w.setFrameUsingName("MainWindow2") { w.center() }
+        buildControls()
+        apply(layout: Layout.loadCurrent(), resizeWindow: true)
+        w.setFrameAutosaveName("MainWindow3")
+        if !w.setFrameUsingName("MainWindow3") { w.center() }
         wire()
     }
     required init?(coder: NSCoder) { fatalError() }
 
     // MARK: UI
 
-    private func keyButton(_ title: String, _ key: Int32, width: CGFloat = 92) -> NSButton {
-        let b = NSButton(title: title, target: self, action: #selector(keyPressed(_:)))
-        b.tag = Int(key)
-        b.bezelStyle = .rounded
-        b.translatesAutoresizingMaskIntoConstraints = false
-        b.widthAnchor.constraint(equalToConstant: width).isActive = true
-        if let name = utd_key_name(key) { b.toolTip = "Sends the \(String(cString: name)) key to the scope" }
-        keyButtons.append(b)
-        return b
-    }
-
-    private func sectionLabel(_ s: String) -> NSTextField {
-        let l = NSTextField(labelWithString: s)
-        l.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
-        l.textColor = .secondaryLabelColor
-        return l
-    }
-
-    private func buildUI() {
+    private func buildControls() {
         guard let content = window?.contentView else { return }
+        canvas.frame = content.bounds
+        canvas.autoresizingMask = [.width, .height]
+        content.addSubview(canvas)
 
-        // Top bar
+        connectButton.title = "Connect"
         connectButton.target = self
         connectButton.action = #selector(toggleConnect(_:))
-        connectButton.bezelStyle = .rounded
+        shotButton.title = "Save Screenshot…"
+        shotButton.target = self
+        shotButton.action = #selector(saveScreenshot(_:))
+        waveButton.title = "Waveform…"
+        waveButton.target = self
+        waveButton.action = #selector(showWaveform(_:))
         liveCheck.target = self
         liveCheck.action = #selector(toggleLive(_:))
-        let shotButton = NSButton(title: "Save Screenshot…", target: self, action: #selector(saveScreenshot(_:)))
-        let waveButton = NSButton(title: "Waveform…", target: self, action: #selector(showWaveform(_:)))
-        modelPopup.addItems(withTitles: ["UTD1052DL (2 channels)", "UTD1000CL (1 channel)"])
+        modelPopup.addItems(withTitles: ["UTD1052DL (2 channels)", "UTD1025CL / UTD1000CL (1 channel)"])
         modelPopup.target = self
         modelPopup.action = #selector(modelChanged(_:))
         modelPopup.toolTip = "Which model is connected; this sets the size of the waveform request"
-        statusDot.textColor = .systemRed
-        statusLabel.lineBreakMode = .byTruncatingTail
-        statusLabel.textColor = .secondaryLabelColor
-        statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        let top = NSStackView(views: [connectButton, liveCheck, shotButton, waveButton, modelPopup, statusDot, statusLabel])
-        top.orientation = .horizontal
-        top.spacing = 10
-        top.setCustomSpacing(4, after: statusDot)
-
-        // Screen + F1–F4 (the scope has its menu keys beside the screen)
-        screenView.translatesAutoresizingMaskIntoConstraints = false
-        screenView.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        screenView.setContentHuggingPriority(.defaultLow, for: .vertical)
-        screenView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        screenView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
-        screenView.widthAnchor.constraint(equalTo: screenView.heightAnchor, multiplier: 4.0 / 3.0).isActive = true
-        screenView.widthAnchor.constraint(greaterThanOrEqualToConstant: 480).isActive = true
-        let fKeys = NSStackView(views: [keyButton("F1", 0x18, width: 56), keyButton("F2", 0x19, width: 56),
-                                        keyButton("F3", 0x1A, width: 56), keyButton("F4", 0x1B, width: 56)])
-        fKeys.orientation = .vertical
-        fKeys.distribution = .equalSpacing
-        fKeys.spacing = 40
-
-        // Front panel
-        let grid = NSGridView(views: [
-            [keyButton("Run/Stop", 0x0C), keyButton("Auto", 0x17), keyButton("Single", 0x10)],
-            [keyButton("CH1", 0x06), keyButton("Math", 0x0E), keyButton("Measure", 0x02)],
-            [keyButton("Acquire", 0x1D), keyButton("Display", 0x0D), keyButton("Trigger", 0x11)],
-            [keyButton("Horizontal", 0x00), keyButton("Record", 0x0F), keyButton("DSO/DMM", 0x1C)],
-            [keyButton("Shift", 0x01), keyButton("Select", 0x07), keyButton("OK", 0x16)],
-        ])
-        grid.rowSpacing = 4
-        grid.columnSpacing = 6
-        // Arrow cross: four buttons placed explicitly in a fixed-size box
-        let arrows = NSView()
-        arrows.translatesAutoresizingMaskIntoConstraints = false
-        let up = keyButton("▲", 0x12, width: 50), down = keyButton("▼", 0x13, width: 50)
-        let left = keyButton("◀", 0x14, width: 50), right = keyButton("▶", 0x15, width: 50)
-        for b in [up, down, left, right] { arrows.addSubview(b) }
-        NSLayoutConstraint.activate([
-            arrows.widthAnchor.constraint(equalToConstant: 160),
-            arrows.heightAnchor.constraint(equalToConstant: 80),
-            up.centerXAnchor.constraint(equalTo: arrows.centerXAnchor),
-            up.topAnchor.constraint(equalTo: arrows.topAnchor),
-            down.centerXAnchor.constraint(equalTo: arrows.centerXAnchor),
-            down.bottomAnchor.constraint(equalTo: arrows.bottomAnchor),
-            left.leadingAnchor.constraint(equalTo: arrows.leadingAnchor),
-            left.centerYAnchor.constraint(equalTo: arrows.centerYAnchor),
-            right.trailingAnchor.constraint(equalTo: arrows.trailingAnchor),
-            right.centerYAnchor.constraint(equalTo: arrows.centerYAnchor),
-        ])
-        let volts = NSStackView(views: [keyButton("V", 0x08, width: 60), keyButton("mV", 0x09, width: 60)])
-        let time = NSStackView(views: [keyButton("s", 0x0A, width: 60), keyButton("ns", 0x0B, width: 60)])
-        let panel = NSStackView(views: [sectionLabel("FRONT PANEL"), grid,
-                                        sectionLabel("CURSOR / POSITION"), arrows,
-                                        sectionLabel("VOLTS/DIV"), volts,
-                                        sectionLabel("TIME/DIV"), time])
-        panel.orientation = .vertical
-        panel.alignment = .leading
-        panel.spacing = 6
-        panel.setCustomSpacing(14, after: grid)
-        panel.setCustomSpacing(14, after: arrows)
-        panel.setCustomSpacing(14, after: volts)
-
-        // Explicit layout: top bar, then screen | F-keys | panel. The screen keeps 4:3 and
-        // takes the window's height; the panel keeps its natural size.
-        for v in [top, fKeys, panel] as [NSView] {
-            v.translatesAutoresizingMaskIntoConstraints = false
-            content.addSubview(v)
+        for (id, code) in MainWindowController.keyCodes {
+            let b = KeyButton(frame: .zero)
+            b.tag = Int(code)
+            b.target = self
+            b.action = #selector(keyPressed(_:))
+            if let name = utd_key_name(code) { b.toolTip = "Sends the \(String(cString: name)) key to the scope" }
+            keyButtons[id] = b
         }
-        content.addSubview(screenView)
-        top.setHuggingPriority(.required, for: .vertical)
-        panel.setHuggingPriority(.required, for: .vertical)
-        panel.setHuggingPriority(.required, for: .horizontal)
-        // The screen is the part that gives way when the window is small.
-        let screenBottom = screenView.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -14)
-        screenBottom.priority = NSLayoutConstraint.Priority(rawValue: 600)
-        NSLayoutConstraint.activate([
-            top.topAnchor.constraint(equalTo: content.topAnchor, constant: 12),
-            top.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
-            top.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -14),
+    }
 
-            screenView.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
-            screenView.topAnchor.constraint(equalTo: top.bottomAnchor, constant: 12),
-            screenView.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -14),
-            screenBottom,
+    private func view(for id: String) -> NSView? {
+        switch id {
+        case "connect": return connectButton
+        case "live": return liveCheck
+        case "screenshot": return shotButton
+        case "waveform": return waveButton
+        case "model": return modelPopup
+        case "status": return statusView
+        case "screen": return screenView
+        default: return keyButtons[id]
+        }
+    }
 
-            fKeys.leadingAnchor.constraint(equalTo: screenView.trailingAnchor, constant: 12),
-            fKeys.centerYAnchor.constraint(equalTo: screenView.centerYAnchor),
-            fKeys.heightAnchor.constraint(equalTo: screenView.heightAnchor, multiplier: 0.8),
-
-            panel.leadingAnchor.constraint(equalTo: fKeys.trailingAnchor, constant: 16),
-            panel.widthAnchor.constraint(greaterThanOrEqualToConstant: 3 * 92 + 2 * 6),
-            panel.topAnchor.constraint(equalTo: screenView.topAnchor),
-            panel.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -14),
-            panel.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -14),
-        ])
+    /// Places every control where the layout says. Controls the layout leaves out are hidden.
+    func apply(layout l: Layout, resizeWindow: Bool) {
+        layout = l
+        for v in canvas.subviews { v.removeFromSuperview() }
+        extraLabels.removeAll()
+        let size = NSSize(width: l.window.width, height: l.window.height)
+        canvas.designSize = size
+        var placed = Set<String>()
+        for it in l.items {
+            let frame = NSRect(x: it.x, y: it.y, width: max(4, it.w), height: max(4, it.h))
+            if it.type == "label" {
+                let t = NSTextField(labelWithString: it.text ?? "")
+                t.font = NSFont.systemFont(ofSize: it.size ?? 11, weight: (it.bold ?? false) ? .semibold : .regular)
+                t.textColor = .secondaryLabelColor
+                t.lineBreakMode = .byClipping
+                t.frame = frame
+                t.isHidden = it.hidden ?? false
+                canvas.addSubview(t)
+                extraLabels.append(t)
+                continue
+            }
+            guard let v = view(for: it.id), !placed.contains(it.id) else { continue }
+            placed.insert(it.id)
+            v.frame = frame
+            v.isHidden = it.hidden ?? false
+            if let b = v as? KeyButton {
+                if let t = it.label, !t.isEmpty, b !== connectButton { b.title = t }
+                b.fill = KeyButton.colour(named: it.color)
+                b.needsDisplay = true
+            } else if v === liveCheck, let t = it.label, !t.isEmpty {
+                liveCheck.title = t
+            }
+            canvas.addSubview(v)
+        }
+        // Anything the layout does not mention stays out of sight but keeps working from the menus.
+        for id in ["connect", "live", "screenshot", "waveform", "model", "status", "screen"] + Array(keyButtons.keys) where !placed.contains(id) {
+            view(for: id)?.isHidden = true
+        }
+        if let w = window {
+            w.contentAspectRatio = size
+            w.contentMinSize = NSSize(width: size.width * 0.5, height: size.height * 0.5)
+            if resizeWindow { w.setContentSize(size) }
+        }
+        gLogSink?("Layout: \(l.name ?? "unnamed"), \(l.items.count) items, \(Int(size.width))×\(Int(size.height))")
     }
 
     private func wire() {
         let d = UserDefaults.standard
         scope.singleChannel = d.bool(forKey: "singleChannel")
-        scope.paletteBGR = !d.bool(forKey: "paletteRGB")
+        scope.paletteBGR = d.bool(forKey: "paletteBGR")
         scope.screenFormat = d.integer(forKey: "screenFormat")
+        if d.object(forKey: "singleChannel") == nil { scope.singleChannel = true }  // UTD1025CL is the common case
         modelPopup.selectItem(at: scope.singleChannel ? 1 : 0)
 
         scope.onFrame = { [weak self] img, _ in self?.screenView.image = img }
@@ -175,7 +148,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         connected = ok
         statusLabel.stringValue = msg
         statusLabel.toolTip = msg
-        statusDot.textColor = ok ? .systemGreen : .systemRed
+        statusView.dot.textColor = ok ? .systemGreen : .systemRed
         connectButton.title = ok ? "Disconnect" : "Connect"
         if !ok { screenView.placeholder = liveCheck.state == .on ? "Waiting for the oscilloscope…" : "Not connected" }
         if !ok && liveCheck.state == .off { screenView.image = nil }
@@ -185,8 +158,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     func showDemoFrame() {
         var header = [UInt8](repeating: 0, count: 0xC0)
         header[0x40] = 0x55; header[0x41] = 0xAA
-        // palette entries stored B,G,R like the Windows app expects
-        let palette: [[UInt8]] = [[0, 0, 0], [70, 70, 70], [40, 214, 255], [255, 200, 0], [230, 230, 230]]
+        // palette entries stored R,G,B, as the UTD1025CL sends them
+        let palette: [[UInt8]] = [[0, 0, 0], [70, 70, 70], [255, 214, 40], [0, 200, 255], [230, 230, 230]]
         for (i, e) in palette.enumerated() { for j in 0..<3 { header[0x44 + 3 * i + j] = e[j] } }
         var rle: [UInt8] = []
         func emit(_ c: Int, _ n: Int) {
@@ -209,7 +182,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         }
         var rgb = [UInt8](repeating: 0, count: w * h * 3)
         header.withUnsafeBufferPointer { hb in rle.withUnsafeBufferPointer { rb in rgb.withUnsafeMutableBufferPointer { ob in
-            utd_decode_screen(hb.baseAddress, rb.baseAddress, Int32(rle.count), ob.baseAddress, 1)
+            utd_decode_screen(hb.baseAddress, rb.baseAddress, Int32(rle.count), ob.baseAddress, 0)
         } } }
         screenView.image = ScopeController.makeImage(rgb)
         statusLabel.stringValue = "Demo frame (\(rle.count) bytes of run-length data decoded)"
@@ -247,7 +220,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
     @objc func toggleSwapColors(_ sender: Any?) {
         scope.paletteBGR.toggle()
-        UserDefaults.standard.set(!scope.paletteBGR, forKey: "paletteRGB")
+        UserDefaults.standard.set(scope.paletteBGR, forKey: "paletteBGR")
         if connected && !isLive { scope.refreshScreen() }
     }
 
@@ -255,6 +228,43 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         scope.screenFormat = sender.tag
         UserDefaults.standard.set(sender.tag, forKey: "screenFormat")
         if connected && !isLive { scope.refreshScreen() }
+    }
+
+    @objc func loadLayout(_ sender: Any?) {
+        guard let w = window else { return }
+        let panel = NSOpenPanel()
+        panel.allowedFileTypes = ["json"]
+        panel.message = "Choose a layout made with the ScopeLink Layout Designer"
+        panel.beginSheetModal(for: w) { resp in
+            guard resp == .OK, let url = panel.url else { return }
+            do {
+                let l = try Layout.parse(try Data(contentsOf: url))
+                try l.saveAsCurrent()
+                self.apply(layout: l, resizeWindow: true)
+            } catch {
+                self.alert("Could not load the layout", error.localizedDescription)
+            }
+        }
+    }
+
+    @objc func exportLayout(_ sender: Any?) {
+        guard let w = window, let data = layout.encoded() else { return }
+        let panel = NSSavePanel()
+        panel.allowedFileTypes = ["json"]
+        panel.nameFieldStringValue = "\(layout.name ?? "layout").scopelink-layout.json"
+        panel.beginSheetModal(for: w) { resp in
+            guard resp == .OK, let url = panel.url else { return }
+            do { try data.write(to: url) } catch { self.alert("Could not save", error.localizedDescription) }
+        }
+    }
+
+    @objc func resetLayout(_ sender: Any?) {
+        Layout.resetCurrent()
+        apply(layout: Layout.builtIn, resizeWindow: true)
+    }
+
+    @objc func openDesigner(_ sender: Any?) {
+        if let u = URL(string: "https://claude.ai/artifact/66mP8GDX1nkheiqmCBze2y") { NSWorkspace.shared.open(u) }
     }
 
     static func timestamp() -> String {

@@ -1,6 +1,6 @@
 # ScopeLink
 
-A native Mac app for UNI-T UTD1000-series handheld oscilloscopes (UTD1052DL, UTD1000CL and
+A native Mac app for UNI-T UTD1000-series handheld oscilloscopes (UTD1025CL, UTD1052DL, UTD1000CL and
 relatives that show up on USB as `5345:1234`). It replaces UNI-T's Windows-only
 "Digital Storage Oscilloscope" software. No drivers, no Homebrew: libusb is built into the app.
 
@@ -12,6 +12,8 @@ relatives that show up on USB as `5345:1234`). It replaces UNI-T's Windows-only
 - **Save Screenshot…** as PNG
 - **Waveform…**: captures the sample data, plots it and saves it as CSV (raw 8-bit codes plus the
   channel settings the scope reports; conversion to volts is not decoded yet)
+- **Your own layout**: arrange every control in the browser-based Layout Designer, then load the
+  template with View ▸ Load Layout… (View ▸ Reset to Default Layout goes back)
 - Log window (Window ▸ Log, ⇧⌘L) showing every USB step
 - Includes `scopectl`, a command-line tool for the same functions
 
@@ -28,9 +30,18 @@ Every push to `main` is built by GitHub Actions and published on the **Releases*
 1. Connect the scope with its USB cable and switch it on.
 2. Start ScopeLink. It connects by itself; the status line shows the scope it found.
 3. Tick **Live view** for a running picture, or click any key and the screen updates once.
-4. Pick your model in the menu at the top (2-channel UTD1052DL or 1-channel UTD1000CL);
+4. Pick your model in the menu at the top (2-channel UTD1052DL, or 1-channel UTD1025CL / UTD1000CL);
    it sets the size of the waveform request.
 5. If the colours look wrong (red and blue swapped), use View ▸ Swap Red/Blue Colours.
+
+## Layouts
+
+A layout is a JSON file (`"format": "scopelink-layout"`) listing each control by id with its position
+and size in points from the window's top-left corner, plus optional label text, key colour
+(`red`, `green`, `yellow`, `blue`, `grey`, `black`) and free text labels (`"type": "label"`).
+The built-in one is `Resources/default-layout.json`. A loaded layout is kept in
+`~/Library/Application Support/ScopeLink/layout.json`. The window keeps the layout's proportions
+and scales everything when resized.
 
 ## Command-line tool
 
@@ -44,7 +55,7 @@ scopectl watch ~/Desktop 2    screenshot every 2 seconds
 scopectl raw 03 e0            send any command and hex-dump the reply (for exploring)
 ```
 
-Options: `-v` USB details, `--1ch` single-channel model, `--rgb` alternative colour order.
+Options: `-v` USB details, `--1ch` single-channel model, `--bgr` alternative colour order, `--format cl|dl` screen format.
 Inside the app bundle it is at `ScopeLink.app/Contents/MacOS/scopectl`; the zip also has a copy.
 
 ## Protocol

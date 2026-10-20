@@ -24,7 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { return true }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        if menuItem.action == #selector(toggleSwap(_:)) { menuItem.state = main?.scope.paletteBGR == false ? .on : .off }
+        if menuItem.action == #selector(toggleSwap(_:)) { menuItem.state = main?.scope.paletteBGR == true ? .on : .off }
         if menuItem.action == #selector(toggleLiveMenu(_:)) { menuItem.state = main?.isLive == true ? .on : .off }
         if menuItem.action == #selector(setFormat(_:)) { menuItem.state = main?.scope.screenFormat == menuItem.tag ? .on : .off }
         return true
@@ -32,6 +32,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     @objc func showLog(_ sender: Any?) { log.showWindow(nil) }
     @objc func setFormat(_ sender: NSMenuItem) { main.setScreenFormat(sender) }
+    @objc func loadLayout(_ sender: Any?) { main.loadLayout(sender) }
+    @objc func exportLayout(_ sender: Any?) { main.exportLayout(sender) }
+    @objc func resetLayout(_ sender: Any?) { main.resetLayout(sender) }
+    @objc func openDesigner(_ sender: Any?) { main.openDesigner(sender) }
     @objc func toggleSwap(_ sender: Any?) { main.toggleSwapColors(sender) }
     @objc func toggleLiveMenu(_ sender: Any?) { main.toggleLive(sender) }
     @objc func saveShot(_ sender: Any?) { main.saveScreenshot(sender) }
@@ -94,6 +98,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         live.tag = 1
         view.addItem(live)
         view.addItem(item("Swap Red/Blue Colours", #selector(toggleSwap(_:)), ""))
+        view.addItem(.separator())
+        view.addItem(item("Load Layout…", #selector(loadLayout(_:)), "o"))
+        view.addItem(item("Export Current Layout…", #selector(exportLayout(_:)), ""))
+        view.addItem(item("Reset to Default Layout", #selector(resetLayout(_:)), ""))
+        view.addItem(item("Open Layout Designer", #selector(openDesigner(_:)), ""))
         view.addItem(.separator())
         let fmtItem = NSMenuItem(title: "Screen Format", action: nil, keyEquivalent: "")
         let fmtMenu = NSMenu(title: "Screen Format")

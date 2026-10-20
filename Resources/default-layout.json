@@ -1,0 +1,326 @@
+{
+ "format": "scopelink-layout",
+ "version": 1,
+ "name": "Default",
+ "window": {
+  "width": 1120,
+  "height": 600
+ },
+ "items": [
+  {
+   "id": "connect",
+   "label": "Connect",
+   "x": 14,
+   "y": 10,
+   "w": 90,
+   "h": 26
+  },
+  {
+   "id": "live",
+   "label": "Live view",
+   "x": 112,
+   "y": 10,
+   "w": 96,
+   "h": 26
+  },
+  {
+   "id": "screenshot",
+   "label": "Save Screenshot…",
+   "x": 214,
+   "y": 10,
+   "w": 136,
+   "h": 26
+  },
+  {
+   "id": "waveform",
+   "label": "Waveform…",
+   "x": 356,
+   "y": 10,
+   "w": 96,
+   "h": 26
+  },
+  {
+   "id": "model",
+   "label": "UTD1025CL (1 channel)",
+   "x": 458,
+   "y": 10,
+   "w": 200,
+   "h": 26
+  },
+  {
+   "id": "status",
+   "label": "Status",
+   "x": 668,
+   "y": 10,
+   "w": 438,
+   "h": 26
+  },
+  {
+   "id": "screen",
+   "x": 14,
+   "y": 46,
+   "w": 720,
+   "h": 540
+  },
+  {
+   "id": "key.f1",
+   "label": "F1",
+   "x": 746,
+   "y": 100,
+   "w": 58,
+   "h": 24
+  },
+  {
+   "id": "key.f2",
+   "label": "F2",
+   "x": 746,
+   "y": 236,
+   "w": 58,
+   "h": 24
+  },
+  {
+   "id": "key.f3",
+   "label": "F3",
+   "x": 746,
+   "y": 372,
+   "w": 58,
+   "h": 24
+  },
+  {
+   "id": "key.f4",
+   "label": "F4",
+   "x": 746,
+   "y": 508,
+   "w": 58,
+   "h": 24
+  },
+  {
+   "id": "label.panel",
+   "type": "label",
+   "text": "FRONT PANEL",
+   "x": 818,
+   "y": 50,
+   "w": 200,
+   "h": 16,
+   "size": 11,
+   "bold": true
+  },
+  {
+   "id": "key.run",
+   "label": "Run/Stop",
+   "x": 818,
+   "y": 70,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.auto",
+   "label": "Auto",
+   "x": 916,
+   "y": 70,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.single",
+   "label": "Single",
+   "x": 1014,
+   "y": 70,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.ch1",
+   "label": "CH1",
+   "x": 818,
+   "y": 96,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.math",
+   "label": "Math",
+   "x": 916,
+   "y": 96,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.measure",
+   "label": "Measure",
+   "x": 1014,
+   "y": 96,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.acquire",
+   "label": "Acquire",
+   "x": 818,
+   "y": 122,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.display",
+   "label": "Display",
+   "x": 916,
+   "y": 122,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.trigger",
+   "label": "Trigger",
+   "x": 1014,
+   "y": 122,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.horizontal",
+   "label": "Horizontal",
+   "x": 818,
+   "y": 148,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.record",
+   "label": "Record",
+   "x": 916,
+   "y": 148,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.dso",
+   "label": "DSO/DMM",
+   "x": 1014,
+   "y": 148,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.shift",
+   "label": "Shift",
+   "x": 818,
+   "y": 174,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.select",
+   "label": "Select",
+   "x": 916,
+   "y": 174,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "key.ok",
+   "label": "OK",
+   "x": 1014,
+   "y": 174,
+   "w": 92,
+   "h": 24
+  },
+  {
+   "id": "label.cursor",
+   "type": "label",
+   "text": "CURSOR / POSITION",
+   "x": 818,
+   "y": 210,
+   "w": 200,
+   "h": 16,
+   "size": 11,
+   "bold": true
+  },
+  {
+   "id": "key.up",
+   "label": "▲",
+   "x": 893,
+   "y": 230,
+   "w": 50,
+   "h": 24
+  },
+  {
+   "id": "key.left",
+   "label": "◀",
+   "x": 838,
+   "y": 256,
+   "w": 50,
+   "h": 24
+  },
+  {
+   "id": "key.right",
+   "label": "▶",
+   "x": 948,
+   "y": 256,
+   "w": 50,
+   "h": 24
+  },
+  {
+   "id": "key.down",
+   "label": "▼",
+   "x": 893,
+   "y": 282,
+   "w": 50,
+   "h": 24
+  },
+  {
+   "id": "label.volts",
+   "type": "label",
+   "text": "VOLTS/DIV",
+   "x": 818,
+   "y": 322,
+   "w": 200,
+   "h": 16,
+   "size": 11,
+   "bold": true
+  },
+  {
+   "id": "key.volts-v",
+   "label": "V",
+   "x": 818,
+   "y": 342,
+   "w": 60,
+   "h": 24
+  },
+  {
+   "id": "key.volts-mv",
+   "label": "mV",
+   "x": 884,
+   "y": 342,
+   "w": 60,
+   "h": 24
+  },
+  {
+   "id": "label.time",
+   "type": "label",
+   "text": "TIME/DIV",
+   "x": 818,
+   "y": 380,
+   "w": 200,
+   "h": 16,
+   "size": 11,
+   "bold": true
+  },
+  {
+   "id": "key.time-s",
+   "label": "s",
+   "x": 818,
+   "y": 400,
+   "w": 60,
+   "h": 24
+  },
+  {
+   "id": "key.time-ns",
+   "label": "ns",
+   "x": 884,
+   "y": 400,
+   "w": 60,
+   "h": 24
+  }
+ ]
+}

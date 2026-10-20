@@ -18,7 +18,7 @@ static void usage(void) {
     printf(
 "scopectl %s - UNI-T UTD1000-series oscilloscope over USB\n"
 "\n"
-"Usage: scopectl [-v] [--1ch] [--rgb] <command> [arguments]\n"
+"Usage: scopectl [-v] [--1ch] [--bgr] <command> [arguments]\n"
 "\n"
 "Commands:\n"
 "  info                      Find the oscilloscope and show what it is\n"
@@ -33,8 +33,8 @@ static void usage(void) {
 "\n"
 "Options:\n"
 "  -v       show USB details\n"
-"  --1ch    single-channel model (UTD1000CL); default is 2-channel (UTD1052DL)\n"
-"  --rgb    treat the scope's palette as R,G,B instead of B,G,R (use if colours look swapped)\n"
+"  --1ch    single-channel model (UTD1025CL, UTD1000CL); default is 2-channel (UTD1052DL)\n"
+"  --bgr    treat the scope's palette as B,G,R instead of R,G,B (use if red and blue look swapped)\n"
 "  --format auto|cl|dl   screen data format (default auto; cl = UTD1000CL, dl = UTD1052DL)\n"
 "\n"
 "Firmware upgrade is deliberately not supported.\n", SCOPELINK_VERSION);
@@ -65,12 +65,13 @@ static void hexdump(const uint8_t *b, int n) {
 }
 
 int main(int argc, char **argv) {
-    int one_ch = 0, rgb_pal = 0;
+    int one_ch = 0, bgr_pal = 0;
     int i = 1;
     for (; i < argc && argv[i][0] == '-'; i++) {
         if (!strcmp(argv[i], "-v")) verbose = 1;
         else if (!strcmp(argv[i], "--1ch")) one_ch = 1;
-        else if (!strcmp(argv[i], "--rgb")) rgb_pal = 1;
+        else if (!strcmp(argv[i], "--bgr")) bgr_pal = 1;
+        else if (!strcmp(argv[i], "--rgb")) bgr_pal = 0;
         else if (!strcmp(argv[i], "--format") && i + 1 < argc) {
             const char *f = argv[++i];
             utd_set_screen_format(!strcasecmp(f, "cl") ? UTD_SCREEN_FMT_1000CL : !strcasecmp(f, "dl") ? UTD_SCREEN_FMT_1052DL : UTD_SCREEN_FMT_AUTO);
@@ -113,7 +114,7 @@ int main(int argc, char **argv) {
         if (i < argc) snprintf(name, sizeof name, "%s", argv[i]); else stamp(name, sizeof name, "scope", "png");
         if (!open_or_die(&d)) return 1;
         static uint8_t rgb[UTD_SCREEN_W * UTD_SCREEN_H * 3];
-        int r = utd_capture_screen(d, rgb, !rgb_pal);
+        int r = utd_capture_screen(d, rgb, bgr_pal);
         utd_close(d);
         if (r) { fprintf(stderr, "error: %s\n", utd_strerror(r)); return 1; }
         if (utd_write_png(name, rgb, UTD_SCREEN_W, UTD_SCREEN_H)) { fprintf(stderr, "error: cannot write %s\n", name); return 1; }
@@ -167,7 +168,7 @@ int main(int argc, char **argv) {
         static uint8_t rgb[UTD_SCREEN_W * UTD_SCREEN_H * 3];
         printf("Saving a screenshot every %.1f s to %s (Ctrl-C to stop)\n", secs, dir);
         for (;;) {
-            int r = utd_capture_screen(d, rgb, !rgb_pal);
+            int r = utd_capture_screen(d, rgb, bgr_pal);
             if (r) { fprintf(stderr, "error: %s\n", utd_strerror(r)); break; }
             char name[200], path[512];
             stamp(name, sizeof name, "scope", "png");

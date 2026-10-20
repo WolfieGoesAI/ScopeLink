@@ -126,6 +126,7 @@ for S in 16 32 128 256 512; do
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 cp "$WORK/libusb-x86_64/COPYING" "$APP/Contents/Resources/libusb-LICENSE.txt"
+cp "$ROOT/Resources/default-layout.json" "$APP/Contents/Resources/default-layout.json"
 
 log "Signing (ad hoc)"
 codesign --force --sign - "$APP/Contents/MacOS/scopectl"
