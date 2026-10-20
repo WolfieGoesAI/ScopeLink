@@ -34,8 +34,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         w.delegate = self
         buildControls()
         apply(layout: Layout.loadCurrent(), resizeWindow: true)
-        w.setFrameAutosaveName("MainWindow3")
-        if !w.setFrameUsingName("MainWindow3") { w.center() }
+        w.setFrameAutosaveName("MainWindow4")
+        if w.setFrameUsingName("MainWindow4") {
+            // keep the layout's proportions even if the saved window size came from another layout
+            let cw = w.contentRect(forFrameRect: w.frame).width
+            w.setContentSize(NSSize(width: cw, height: cw * layout.window.height / layout.window.width))
+        } else { w.center() }
         wire()
     }
     required init?(coder: NSCoder) { fatalError() }
