@@ -59,7 +59,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         waveButton.action = #selector(showWaveform(_:))
         liveCheck.target = self
         liveCheck.action = #selector(toggleLive(_:))
-        modelPopup.addItems(withTitles: ["UTD1052DL (2 channels)", "UTD1025CL / UTD1000CL (1 channel)"])
+        modelPopup.addItems(withTitles: ["UTD1052DL (2 channels)", "UTD1025CL (1 channel)"])
         modelPopup.target = self
         modelPopup.action = #selector(modelChanged(_:))
         modelPopup.toolTip = "Which model is connected; this sets the size of the waveform request"
