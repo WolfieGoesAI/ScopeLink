@@ -13,15 +13,15 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     var waveWindow: WaveWindowController?
 
     init() {
-        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1060, height: 600),
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1120, height: 600),
                          styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         w.title = "ScopeLink"
-        w.minSize = NSSize(width: 900, height: 470)
+        w.minSize = NSSize(width: 1000, height: 480)
         super.init(window: w)
         w.delegate = self
         buildUI()
-        w.setFrameAutosaveName("MainWindow")
-        if !w.setFrameUsingName("MainWindow") { w.center() }
+        w.setFrameAutosaveName("MainWindow2")
+        if !w.setFrameUsingName("MainWindow2") { w.center() }
         wire()
     }
     required init?(coder: NSCoder) { fatalError() }
@@ -74,6 +74,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         screenView.translatesAutoresizingMaskIntoConstraints = false
         screenView.setContentHuggingPriority(.defaultLow, for: .horizontal)
         screenView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        screenView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        screenView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         screenView.widthAnchor.constraint(equalTo: screenView.heightAnchor, multiplier: 4.0 / 3.0).isActive = true
         screenView.widthAnchor.constraint(greaterThanOrEqualToConstant: 480).isActive = true
         let fKeys = NSStackView(views: [keyButton("F1", 0x18, width: 56), keyButton("F2", 0x19, width: 56),
@@ -122,40 +124,37 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         panel.setCustomSpacing(14, after: grid)
         panel.setCustomSpacing(14, after: arrows)
         panel.setCustomSpacing(14, after: volts)
+
+        // Explicit layout: top bar, then screen | F-keys | panel. The screen keeps 4:3 and
+        // takes the window's height; the panel keeps its natural size.
+        for v in [top, fKeys, panel] as [NSView] {
+            v.translatesAutoresizingMaskIntoConstraints = false
+            content.addSubview(v)
+        }
+        content.addSubview(screenView)
         panel.setHuggingPriority(.required, for: .vertical)
-        panel.distribution = .fill
-        panel.detachesHiddenViews = true
-
-        let main = NSStackView(views: [screenView, fKeys, panel])
-        main.orientation = .horizontal
-        main.alignment = .top
-        main.spacing = 14
-
-        let root = NSStackView(views: [top, main])
-        root.orientation = .vertical
-        root.alignment = .leading
-        root.spacing = 12
-        root.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 14, right: 14)
-        root.distribution = .fill
-        top.setHuggingPriority(.required, for: .vertical)
-        main.setHuggingPriority(.defaultLow, for: .vertical)
-        root.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(root)
+        panel.setHuggingPriority(.required, for: .horizontal)
+        let screenBottom = screenView.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -14)
+        screenBottom.priority = .defaultHigh
         NSLayoutConstraint.activate([
-            root.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-            root.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            root.topAnchor.constraint(equalTo: content.topAnchor),
-            root.bottomAnchor.constraint(equalTo: content.bottomAnchor),
-            main.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -14),
-            top.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -14),
+            top.topAnchor.constraint(equalTo: content.topAnchor, constant: 12),
+            top.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
+            top.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -14),
+
+            screenView.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
+            screenView.topAnchor.constraint(equalTo: top.bottomAnchor, constant: 12),
+            screenView.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -14),
+            screenBottom,
+
+            fKeys.leadingAnchor.constraint(equalTo: screenView.trailingAnchor, constant: 12),
+            fKeys.centerYAnchor.constraint(equalTo: screenView.centerYAnchor),
             fKeys.heightAnchor.constraint(equalTo: screenView.heightAnchor, multiplier: 0.8),
+
+            panel.leadingAnchor.constraint(equalTo: fKeys.trailingAnchor, constant: 16),
+            panel.topAnchor.constraint(equalTo: screenView.topAnchor),
+            panel.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -14),
+            panel.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -14),
         ])
-        let fill = screenView.heightAnchor.constraint(equalTo: main.heightAnchor)
-        fill.priority = .defaultHigh
-        fill.isActive = true
-        let fillRoot = main.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -14)
-        fillRoot.priority = .defaultHigh
-        fillRoot.isActive = true
     }
 
     private func wire() {
