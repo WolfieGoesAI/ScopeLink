@@ -123,7 +123,24 @@ int utd_press_key(utd_dev *dev, int key);
  */
 int utd_capture_screen(utd_dev *dev, uint8_t *rgb, int palette_bgr);
 
-/* Decoder used by utd_capture_screen; exposed for tests.
+/* Screen data formats. The firmware generations differ:
+ *  UTD_SCREEN_FMT_1000CL: 16-bit LE tokens, colour = w & 0x0F, run = (w >> 4) & 0xFFF;
+ *                          count at header 0x42 = number of tokens; pixels row by row.
+ *                          (UTD1000CL(EN).exe 0x40CD3A / 0x40CE52)
+ *  UTD_SCREEN_FMT_1052DL: 2-byte tokens, colour = b0 & 0x1F, run = (b0 >> 5) | (b1 << 3);
+ *                          count = number of bytes; pixels column by column.
+ *                          (UTD1052DL.exe 0x40DB0F / 0x40DC6F)
+ * The default (auto) picks the format whose runs add up closest to 320*240. */
+enum { UTD_SCREEN_FMT_AUTO = 0, UTD_SCREEN_FMT_1000CL = 1, UTD_SCREEN_FMT_1052DL = 2 };
+void utd_set_screen_format(int fmt);
+int utd_last_screen_format(void);          /* format used for the last capture */
+const char *utd_screen_format_name(int fmt);
+int utd_screen_detect(const uint8_t *header, const uint8_t *data, int datalen);
+void utd_decode_screen_fmt(const uint8_t *header, const uint8_t *data, int datalen, uint8_t *rgb, int palette_bgr, int fmt);
+/* Raw capture for debugging: writes the 0xC0-byte header followed by the data as received. */
+int utd_capture_screen_raw(utd_dev *dev, const char *path);
+
+/* UTD1052DL-format decoder (kept for tests); rle = n bytes of tokens.
  * header: the 0xC0-byte reply header (palette at 0x44); rle: n bytes of 2-byte tokens. */
 void utd_decode_screen(const uint8_t *header, const uint8_t *rle, int n, uint8_t *rgb, int palette_bgr);
 

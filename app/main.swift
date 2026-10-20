@@ -26,10 +26,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(toggleSwap(_:)) { menuItem.state = main?.scope.paletteBGR == false ? .on : .off }
         if menuItem.action == #selector(toggleLiveMenu(_:)) { menuItem.state = main?.isLive == true ? .on : .off }
+        if menuItem.action == #selector(setFormat(_:)) { menuItem.state = main?.scope.screenFormat == menuItem.tag ? .on : .off }
         return true
     }
 
     @objc func showLog(_ sender: Any?) { log.showWindow(nil) }
+    @objc func setFormat(_ sender: NSMenuItem) { main.setScreenFormat(sender) }
     @objc func toggleSwap(_ sender: Any?) { main.toggleSwapColors(sender) }
     @objc func toggleLiveMenu(_ sender: Any?) { main.toggleLive(sender) }
     @objc func saveShot(_ sender: Any?) { main.saveScreenshot(sender) }
@@ -92,6 +94,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         live.tag = 1
         view.addItem(live)
         view.addItem(item("Swap Red/Blue Colours", #selector(toggleSwap(_:)), ""))
+        view.addItem(.separator())
+        let fmtItem = NSMenuItem(title: "Screen Format", action: nil, keyEquivalent: "")
+        let fmtMenu = NSMenu(title: "Screen Format")
+        for (tag, title) in [(0, "Automatic"), (1, "UTD1000CL"), (2, "UTD1052DL")] {
+            let i = NSMenuItem(title: title, action: #selector(setFormat(_:)), keyEquivalent: "")
+            i.tag = tag
+            i.target = self
+            fmtMenu.addItem(i)
+        }
+        fmtItem.submenu = fmtMenu
+        view.addItem(fmtItem)
         viewItem.submenu = view
 
         let winItem = NSMenuItem(); bar.addItem(winItem)

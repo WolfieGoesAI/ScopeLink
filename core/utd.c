@@ -259,13 +259,70 @@ done:
     free(idx);
 }
 
-int utd_capture_screen(utd_dev *dev, uint8_t *rgb, int palette_bgr) {
+static int g_screen_fmt = UTD_SCREEN_FMT_AUTO;
+static int g_last_fmt = 0;
+void utd_set_screen_format(int fmt) { g_screen_fmt = fmt; }
+int utd_last_screen_format(void) { return g_last_fmt; }
+const char *utd_screen_format_name(int fmt) {
+    switch (fmt) {
+    case UTD_SCREEN_FMT_1000CL: return "UTD1000CL (16-bit tokens, rows)";
+    case UTD_SCREEN_FMT_1052DL: return "UTD1052DL (5/11-bit tokens, columns)";
+    default: return "automatic";
+    }
+}
+
+static long sum_1000cl(const uint8_t *data, int ntok, int datalen) {
+    long sum = 0;
+    for (int i = 0; i < ntok && 2 * i + 1 < datalen; i++) sum += (rd16(data + 2 * i) >> 4) & 0xFFF;
+    return sum;
+}
+static long sum_1052dl(const uint8_t *data, int nbytes, int datalen) {
+    long sum = 0;
+    for (int i = 0; i + 1 < nbytes && i + 1 < datalen; i += 2) sum += (data[i] >> 5) | (data[i + 1] << 3);
+    return sum;
+}
+
+int utd_screen_detect(const uint8_t *header, const uint8_t *data, int datalen) {
+    int n = rd16(header + 0x42);
+    long total = (long)UTD_SCREEN_W * UTD_SCREEN_H;
+    long a = sum_1000cl(data, n, datalen), b = sum_1052dl(data, n, datalen);
+    long da = labs(a - total), db = labs(b - total);
+    return da <= db ? UTD_SCREEN_FMT_1000CL : UTD_SCREEN_FMT_1052DL;
+}
+
+void utd_decode_screen_fmt(const uint8_t *header, const uint8_t *data, int datalen, uint8_t *rgb, int palette_bgr, int fmt) {
+    int n = rd16(header + 0x42);
+    if (fmt == UTD_SCREEN_FMT_AUTO) fmt = utd_screen_detect(header, data, datalen);
+    if (fmt == UTD_SCREEN_FMT_1052DL) {
+        utd_decode_screen(header, data, n < datalen ? n : datalen, rgb, palette_bgr);
+        return;
+    }
+    const int total = UTD_SCREEN_W * UTD_SCREEN_H;
+    uint8_t *idx = calloc((size_t)total, 1);
+    if (!idx) return;
+    int pos = 0;
+    for (int i = 0; i < n && 2 * i + 1 < datalen && pos < total; i++) {
+        uint16_t w = rd16(data + 2 * i);
+        int color = w & 0x0F, run = (w >> 4) & 0xFFF;
+        if (run > total - pos) run = total - pos;
+        memset(idx + pos, color, (size_t)run);
+        pos += run;
+    }
+    for (int p = 0; p < total; p++) {
+        const uint8_t *e = header + 0x44 + 3 * idx[p];
+        uint8_t *o = rgb + 3 * p;
+        if (palette_bgr) { o[0] = e[2]; o[1] = e[1]; o[2] = e[0]; }
+        else { o[0] = e[0]; o[1] = e[1]; o[2] = e[2]; }
+    }
+    free(idx);
+}
+
+/* Sends 01 F1 and reads header + data. Caller frees *data. */
+static int capture_screen_bytes(utd_dev *dev, uint8_t header[0xC0], uint8_t **data, int *datalen) {
+    *data = NULL; *datalen = 0;
     int r = utd_send_command(dev, UTD_GROUP_CAPTURE, 0xF1, UTD_SCREEN_PARAM);
     if (r) return r;
-    /* Header: 128 bytes; the image header (55 AA, length, palette) starts at 0x40.
-     * Bytes 0x80..0xBF stay zero, as in the Windows app. */
-    uint8_t header[0xC0];
-    memset(header, 0, sizeof header);
+    memset(header, 0, 0xC0);
     r = utd_read(dev, header, 0x80);
     if (r < 0) return r;
     if (rd16(header + 0x40) != 0xAA55) {
@@ -273,13 +330,42 @@ int utd_capture_screen(utd_dev *dev, uint8_t *rgb, int palette_bgr) {
         return UTD_ERR_SYNC;
     }
     int n = rd16(header + 0x42);
-    int want = ((n << 2) / 64 + 1) * 64; /* exactly what the Windows app requests */
-    uint8_t *data = calloc((size_t)want, 1);
-    if (!data) return UTD_ERR_ARG;
-    r = utd_read(dev, data, want);
-    if (r < 0) { free(data); return r; }
-    if (n > r) n = r;
-    utd_decode_screen(header, data, n, rgb, palette_bgr);
+    int want = ((n << 2) / 64 + 1) * 64; /* exactly what the Windows apps request */
+    uint8_t *buf = calloc((size_t)want, 1);
+    if (!buf) return UTD_ERR_ARG;
+    r = utd_read(dev, buf, want);
+    if (r < 0) { free(buf); return r; }
+    *data = buf; *datalen = r;
+    return UTD_OK;
+}
+
+int utd_capture_screen(utd_dev *dev, uint8_t *rgb, int palette_bgr) {
+    uint8_t header[0xC0];
+    uint8_t *data; int len;
+    int r = capture_screen_bytes(dev, header, &data, &len);
+    if (r) return r;
+    int fmt = g_screen_fmt == UTD_SCREEN_FMT_AUTO ? utd_screen_detect(header, data, len) : g_screen_fmt;
+    if (fmt != g_last_fmt) {
+        int n = rd16(header + 0x42);
+        logf_("screen: %d bytes, count %d; format %s (runs: 1000CL %ld, 1052DL %ld, need %d)", len, n,
+              utd_screen_format_name(fmt), sum_1000cl(data, n, len), sum_1052dl(data, n, len), UTD_SCREEN_W * UTD_SCREEN_H);
+        g_last_fmt = fmt;
+    }
+    utd_decode_screen_fmt(header, data, len, rgb, palette_bgr, fmt);
+    free(data);
+    return UTD_OK;
+}
+
+int utd_capture_screen_raw(utd_dev *dev, const char *path) {
+    uint8_t header[0xC0];
+    uint8_t *data; int len;
+    int r = capture_screen_bytes(dev, header, &data, &len);
+    if (r) return r;
+    FILE *f = fopen(path, "wb");
+    if (!f) { free(data); return UTD_ERR_ARG; }
+    fwrite(header, 1, sizeof header, f);
+    fwrite(data, 1, (size_t)len, f);
+    fclose(f);
     free(data);
     return UTD_OK;
 }

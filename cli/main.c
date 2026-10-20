@@ -26,6 +26,7 @@ static void usage(void) {
 "  wave [file.csv]           Save the current waveform samples as CSV\n"
 "  key <name> [name ...]     Press front-panel keys, e.g.  key auto   key f1 ok\n"
 "  keys                      List key names\n"
+"  screenraw [file.bin]      Save the raw screen reply (header + data) for debugging\n"
 "  watch [folder] [seconds]  Save a screenshot every N seconds (default 1) until Ctrl-C\n"
 "  raw <group> <code> [param] [readlen]\n"
 "                            Send any command and hex-dump the reply (for exploring)\n"
@@ -34,6 +35,7 @@ static void usage(void) {
 "  -v       show USB details\n"
 "  --1ch    single-channel model (UTD1000CL); default is 2-channel (UTD1052DL)\n"
 "  --rgb    treat the scope's palette as R,G,B instead of B,G,R (use if colours look swapped)\n"
+"  --format auto|cl|dl   screen data format (default auto; cl = UTD1000CL, dl = UTD1052DL)\n"
 "\n"
 "Firmware upgrade is deliberately not supported.\n", SCOPELINK_VERSION);
 }
@@ -69,6 +71,10 @@ int main(int argc, char **argv) {
         if (!strcmp(argv[i], "-v")) verbose = 1;
         else if (!strcmp(argv[i], "--1ch")) one_ch = 1;
         else if (!strcmp(argv[i], "--rgb")) rgb_pal = 1;
+        else if (!strcmp(argv[i], "--format") && i + 1 < argc) {
+            const char *f = argv[++i];
+            utd_set_screen_format(!strcasecmp(f, "cl") ? UTD_SCREEN_FMT_1000CL : !strcasecmp(f, "dl") ? UTD_SCREEN_FMT_1052DL : UTD_SCREEN_FMT_AUTO);
+        }
         else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) { usage(); return 0; }
         else if (!strcmp(argv[i], "--version")) { printf("scopectl %s\n", SCOPELINK_VERSION); return 0; }
         else { fprintf(stderr, "unknown option %s\n", argv[i]); return 2; }
@@ -111,6 +117,16 @@ int main(int argc, char **argv) {
         utd_close(d);
         if (r) { fprintf(stderr, "error: %s\n", utd_strerror(r)); return 1; }
         if (utd_write_png(name, rgb, UTD_SCREEN_W, UTD_SCREEN_H)) { fprintf(stderr, "error: cannot write %s\n", name); return 1; }
+        printf("Saved %s (screen format: %s)\n", name, utd_screen_format_name(utd_last_screen_format()));
+        return 0;
+    }
+    if (!strcmp(cmd, "screenraw")) {
+        char name[256];
+        if (i < argc) snprintf(name, sizeof name, "%s", argv[i]); else stamp(name, sizeof name, "screen", "bin");
+        if (!open_or_die(&d)) return 1;
+        int r = utd_capture_screen_raw(d, name);
+        utd_close(d);
+        if (r) { fprintf(stderr, "error: %s\n", utd_strerror(r)); return 1; }
         printf("Saved %s\n", name);
         return 0;
     }

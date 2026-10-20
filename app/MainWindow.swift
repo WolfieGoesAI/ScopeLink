@@ -164,6 +164,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let d = UserDefaults.standard
         scope.singleChannel = d.bool(forKey: "singleChannel")
         scope.paletteBGR = !d.bool(forKey: "paletteRGB")
+        scope.screenFormat = d.integer(forKey: "screenFormat")
         modelPopup.selectItem(at: scope.singleChannel ? 1 : 0)
 
         scope.onFrame = { [weak self] img, _ in self?.screenView.image = img }
@@ -247,6 +248,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     @objc func toggleSwapColors(_ sender: Any?) {
         scope.paletteBGR.toggle()
         UserDefaults.standard.set(!scope.paletteBGR, forKey: "paletteRGB")
+        if connected && !isLive { scope.refreshScreen() }
+    }
+
+    @objc func setScreenFormat(_ sender: NSMenuItem) {
+        scope.screenFormat = sender.tag
+        UserDefaults.standard.set(sender.tag, forKey: "screenFormat")
         if connected && !isLive { scope.refreshScreen() }
     }
 

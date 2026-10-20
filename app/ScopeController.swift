@@ -43,6 +43,8 @@ final class ScopeController {
     var singleChannel = false
     var paletteBGR = true
     var liveInterval: Double = 0.15
+    /// 0 = automatic, 1 = UTD1000CL, 2 = UTD1052DL
+    var screenFormat: Int = 0 { didSet { let f = Int32(screenFormat); queue.async { utd_set_screen_format(f) } } }
 
     var onFrame: ((CGImage, [UInt8]) -> Void)?
     var onStatus: ((Bool, String) -> Void)?
