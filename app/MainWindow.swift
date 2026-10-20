@@ -107,7 +107,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
                 t.lineBreakMode = .byClipping
                 // Keep the designed top-left corner, but never cut the text: the box grows to fit it.
                 let fit = t.intrinsicContentSize
-                t.frame = NSRect(x: frame.minX, y: frame.minY, width: max(frame.width, ceil(fit.width)), height: max(frame.height, ceil(fit.height)))
+                t.frame = NSRect(x: frame.minX, y: frame.minY, width: max(frame.width, ceil(fit.width) + 6), height: max(frame.height, ceil(fit.height)))
                 t.isHidden = it.hidden ?? false
                 canvas.addSubview(t)
                 extraLabels.append(t)
