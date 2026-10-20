@@ -1,4 +1,4 @@
-/* scopelink: command-line tool for UNI-T UTD1000-series oscilloscopes. */
+/* scopectl: command-line tool for UNI-T UTD1000-series oscilloscopes. */
 #include "../core/utd.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,9 +16,9 @@ static void log_line(void *ctx, const char *line) { (void)ctx; if (verbose) fpri
 
 static void usage(void) {
     printf(
-"scopelink %s - UNI-T UTD1000-series oscilloscope over USB\n"
+"scopectl %s - UNI-T UTD1000-series oscilloscope over USB\n"
 "\n"
-"Usage: scopelink [-v] [--1ch] [--rgb] <command> [arguments]\n"
+"Usage: scopectl [-v] [--1ch] [--rgb] <command> [arguments]\n"
 "\n"
 "Commands:\n"
 "  info                      Find the oscilloscope and show what it is\n"
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--1ch")) one_ch = 1;
         else if (!strcmp(argv[i], "--rgb")) rgb_pal = 1;
         else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) { usage(); return 0; }
-        else if (!strcmp(argv[i], "--version")) { printf("scopelink %s\n", SCOPELINK_VERSION); return 0; }
+        else if (!strcmp(argv[i], "--version")) { printf("scopectl %s\n", SCOPELINK_VERSION); return 0; }
         else { fprintf(stderr, "unknown option %s\n", argv[i]); return 2; }
     }
     if (i >= argc) { usage(); return 2; }
@@ -128,9 +128,9 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (!strcmp(cmd, "key")) {
-        if (i >= argc) { fprintf(stderr, "key: name a key (see 'scopelink keys')\n"); return 2; }
+        if (i >= argc) { fprintf(stderr, "key: name a key (see 'scopectl keys')\n"); return 2; }
         for (int j = i; j < argc; j++)
-            if (utd_key_from_name(argv[j]) < 0) { fprintf(stderr, "unknown key '%s' (see 'scopelink keys')\n", argv[j]); return 2; }
+            if (utd_key_from_name(argv[j]) < 0) { fprintf(stderr, "unknown key '%s' (see 'scopectl keys')\n", argv[j]); return 2; }
         if (!open_or_die(&d)) return 1;
         int rc = 0;
         for (; i < argc; i++) {

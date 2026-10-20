@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds ScopeLink.app and the scopelink command-line tool as universal binaries
+# Builds ScopeLink.app and the scopectl command-line tool as universal binaries
 # (Intel macOS 10.14.4+ / Apple silicon macOS 11+). Run on a Mac with the Xcode command-line tools.
 #
 #   scripts/build.sh   -> dist/ScopeLink-<version>.zip
@@ -68,7 +68,7 @@ for ARCH in "${ARCHS[@]}"; do
   $CC_ARCH "${CFLAGS[@]}" -c "$ROOT/core/utd.c" -o "$WORK/obj-$ARCH/utd.o"
   $CC_ARCH "${CFLAGS[@]}" -c "$ROOT/core/png.c" -o "$WORK/obj-$ARCH/png.o"
   $CC_ARCH "${CFLAGS[@]}" "$ROOT/cli/main.c" "$WORK/obj-$ARCH/utd.o" "$WORK/obj-$ARCH/png.o" \
-    "$PREFIX/lib/libusb-1.0.a" "${FRAMEWORKS[@]}" -o "$WORK/scopelink.$ARCH"
+    "$PREFIX/lib/libusb-1.0.a" "${FRAMEWORKS[@]}" -o "$WORK/scopectl.$ARCH"
 
   log "tests for $ARCH"
   $CC_ARCH "${CFLAGS[@]}" "$ROOT/tests/test_core.c" "$WORK/obj-$ARCH/utd.o" "$WORK/obj-$ARCH/png.o" \
@@ -90,12 +90,15 @@ for ARCH in "${ARCHS[@]}"; do
 done
 
 log "Universal binaries"
-lipo -create "$WORK"/scopelink.x86_64 "$WORK"/scopelink.arm64 -output "$WORK/scopelink"
+# (the CLI is called scopectl: macOS file names are case-insensitive, so "scopelink" would overwrite "ScopeLink")
+lipo -create "$WORK"/scopectl.x86_64 "$WORK"/scopectl.arm64 -output "$WORK/scopectl"
 lipo -create "$WORK"/ScopeLink.x86_64 "$WORK"/ScopeLink.arm64 -output "$WORK/ScopeLink"
-lipo -info "$WORK/scopelink" "$WORK/ScopeLink"
+lipo -info "$WORK/scopectl" "$WORK/ScopeLink"
+cmp -s "$WORK/scopectl" "$WORK/ScopeLink" && { echo "ERROR: scopectl and ScopeLink are the same file"; false; }
+"$WORK/scopectl" --version
 
 log "Checking deployment targets and libraries"
-for B in "$WORK/scopelink" "$WORK/ScopeLink"; do
+for B in "$WORK/scopectl" "$WORK/ScopeLink"; do
   otool -L "$B"
   if otool -L "$B" | grep -E '^[[:space:]]' | grep -v -E '^[[:space:]]+(/usr/lib/|/System/Library/|@rpath/libswift)'; then
     echo "ERROR: $B links to a library that is not on every Mac"; false
@@ -110,7 +113,7 @@ done
 log "Assembling ScopeLink.app"
 APP="$WORK/ScopeLink.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$WORK/ScopeLink" "$WORK/scopelink" "$APP/Contents/MacOS/"
+cp "$WORK/ScopeLink" "$WORK/scopectl" "$APP/Contents/MacOS/"
 sed -e "s/@VERSION@/$APP_VERSION/g" -e "s/@BUILD@/$BUILD_NUMBER/g" "$ROOT/Resources/Info.plist" > "$APP/Contents/Info.plist"
 plutil -lint "$APP/Contents/Info.plist"
 
@@ -125,7 +128,7 @@ iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 cp "$WORK/libusb-x86_64/COPYING" "$APP/Contents/Resources/libusb-LICENSE.txt"
 
 log "Signing (ad hoc)"
-codesign --force --sign - "$APP/Contents/MacOS/scopelink"
+codesign --force --sign - "$APP/Contents/MacOS/scopectl"
 codesign --force --sign - "$APP"
 codesign --verify --verbose "$APP"
 
@@ -133,8 +136,8 @@ log "Packaging"
 STAGE="$WORK/stage/ScopeLink-$APP_VERSION"
 mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
-cp "$WORK/scopelink" "$STAGE/scopelink"
-codesign --force --sign - "$STAGE/scopelink"
+cp "$WORK/scopectl" "$STAGE/scopectl"
+codesign --force --sign - "$STAGE/scopectl"
 cp "$ROOT/README.md" "$STAGE/README.md"
 ( cd "$WORK/stage" && ditto -c -k --sequesterRsrc --keepParent "ScopeLink-$APP_VERSION" "$DIST/ScopeLink-$APP_VERSION.zip" )
 cp "$DIST/ScopeLink-$APP_VERSION.zip" "$DIST/ScopeLink-mac.zip"

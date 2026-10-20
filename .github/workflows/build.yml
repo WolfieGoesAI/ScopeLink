@@ -37,7 +37,7 @@ jobs:
       - name: Screenshot of the app
         continue-on-error: true
         run: |
-          open build/ScopeLink.app
+          open build/ScopeLink.app --args --demo
           sleep 8
           screencapture -x dist/screenshot.png || true
           osascript -e 'tell application "ScopeLink" to quit' || true
@@ -71,4 +71,4 @@ jobs:
           gh release create "v$V" dist/ScopeLink-mac.zip "dist/ScopeLink-$V.zip" \
             --repo "${{ github.repository }}" --target "$GITHUB_SHA" --latest \
             --title "ScopeLink $V" \
-            --notes "Download **ScopeLink-mac.zip**, unzip it and move ScopeLink.app to Applications. The first time, right-click the app and choose Open (it is not signed with an Apple developer certificate). Runs on macOS 10.14.4 Mojave or newer, Intel and Apple silicon. The zip also contains the \`scopelink\` command-line tool."
+            --notes "Download **ScopeLink-mac.zip**, unzip it and move ScopeLink.app to Applications. The first time, right-click the app and choose Open (it is not signed with an Apple developer certificate). Runs on macOS 10.14.4 Mojave or newer, Intel and Apple silicon. The zip also contains the \`scopectl\` command-line tool."

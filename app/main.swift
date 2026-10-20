@@ -12,8 +12,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         main = MainWindowController()
         main.showWindow(nil)
         main.window?.makeKeyAndOrderFront(nil)
-        main.scope.connect()
-        main.scope.refreshScreen()
+        if CommandLine.arguments.contains("--demo") {
+            main.showDemoFrame()
+        } else {
+            main.scope.connect()
+            main.scope.refreshScreen()
+        }
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -37,7 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             "For UNI-T UTD1000-series handheld oscilloscopes (UTD1052DL, UTD1000CL) over USB.\n\n" +
             "Live screen, front-panel keys, screenshots and waveform export. " +
             "Firmware upgrade is deliberately not included.\n\n" +
-            "Also included: the scopelink command-line tool (Contents/MacOS/scopelink).\n\n" +
+            "Also included: the scopectl command-line tool (Contents/MacOS/scopectl).\n\n" +
             "Uses libusb (LGPL-2.1).",
             attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.textColor])
         NSApp.orderFrontStandardAboutPanel(options: [NSApplication.AboutPanelOptionKey.credits: credits])

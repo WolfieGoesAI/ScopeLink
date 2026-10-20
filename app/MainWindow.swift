@@ -102,6 +102,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         ])
         arrows.rowSpacing = 2
         arrows.columnSpacing = 2
+        for c in 0..<3 { arrows.column(at: c).width = 50 }
+        for r in 0..<3 { arrows.row(at: r).height = 24 }
+        arrows.xPlacement = .center
+        arrows.yPlacement = .center
+        for g in [grid, arrows] {
+            g.setContentHuggingPriority(.required, for: .vertical)
+            g.setContentHuggingPriority(.required, for: .horizontal)
+        }
         let volts = NSStackView(views: [keyButton("V", 0x08, width: 60), keyButton("mV", 0x09, width: 60)])
         let time = NSStackView(views: [keyButton("s", 0x0A, width: 60), keyButton("ns", 0x0B, width: 60)])
         let panel = NSStackView(views: [sectionLabel("FRONT PANEL"), grid,
@@ -114,6 +122,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         panel.setCustomSpacing(14, after: grid)
         panel.setCustomSpacing(14, after: arrows)
         panel.setCustomSpacing(14, after: volts)
+        panel.setHuggingPriority(.required, for: .vertical)
+        panel.distribution = .fill
+        panel.detachesHiddenViews = true
 
         let main = NSStackView(views: [screenView, fKeys, panel])
         main.orientation = .horizontal
@@ -125,6 +136,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         root.alignment = .leading
         root.spacing = 12
         root.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 14, right: 14)
+        root.distribution = .fill
+        top.setHuggingPriority(.required, for: .vertical)
+        main.setHuggingPriority(.defaultLow, for: .vertical)
         root.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(root)
         NSLayoutConstraint.activate([
@@ -162,6 +176,40 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         connectButton.title = ok ? "Disconnect" : "Connect"
         if !ok { screenView.placeholder = liveCheck.state == .on ? "Waiting for the oscilloscope…" : "Not connected" }
         if !ok && liveCheck.state == .off { screenView.image = nil }
+    }
+
+    /// Test frame through the real decoder (launch with --demo); used by the build to check drawing.
+    func showDemoFrame() {
+        var header = [UInt8](repeating: 0, count: 0xC0)
+        header[0x40] = 0x55; header[0x41] = 0xAA
+        // palette entries stored B,G,R like the Windows app expects
+        let palette: [[UInt8]] = [[0, 0, 0], [70, 70, 70], [40, 214, 255], [255, 200, 0], [230, 230, 230]]
+        for (i, e) in palette.enumerated() { for j in 0..<3 { header[0x44 + 3 * i + j] = e[j] } }
+        var rle: [UInt8] = []
+        func emit(_ c: Int, _ n: Int) {
+            var n = n
+            while n > 0 { let r = min(n, 2047); rle.append(UInt8((c & 0x1F) | ((r & 7) << 5))); rle.append(UInt8(r >> 3)); n -= r }
+        }
+        let w = ScopeController.width, h = ScopeController.height
+        for x in 0..<w {
+            var col = [Int](repeating: 0, count: h)
+            for y in 0..<h {
+                if y < 14 || y >= h - 14 { col[y] = 4 } else if x % 30 == 10 || (y - 14) % 26 == 0 { col[y] = 1 }
+            }
+            let t = Double(x) / Double(w) * 4 * Double.pi
+            let y1 = Int(120 - 70 * sin(t)), y2 = Int(150 - 40 * cos(t * 0.5))
+            for d in -1...1 { if y1 + d >= 0 && y1 + d < h { col[y1 + d] = 2 }; if y2 + d >= 0 && y2 + d < h { col[y2 + d] = 3 } }
+            var run = 1
+            for y in 1...h {
+                if y < h && col[y] == col[y - 1] { run += 1 } else { emit(col[y - 1], run); run = 1 }
+            }
+        }
+        var rgb = [UInt8](repeating: 0, count: w * h * 3)
+        header.withUnsafeBufferPointer { hb in rle.withUnsafeBufferPointer { rb in rgb.withUnsafeMutableBufferPointer { ob in
+            utd_decode_screen(hb.baseAddress, rb.baseAddress, Int32(rle.count), ob.baseAddress, 1)
+        } } }
+        screenView.image = ScopeController.makeImage(rgb)
+        statusLabel.stringValue = "Demo frame (\(rle.count) bytes of run-length data decoded)"
     }
 
     // MARK: actions

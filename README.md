@@ -13,7 +13,7 @@ relatives that show up on USB as `5345:1234`). It replaces UNI-T's Windows-only
 - **Waveform…**: captures the sample data, plots it and saves it as CSV (raw 8-bit codes plus the
   channel settings the scope reports; conversion to volts is not decoded yet)
 - Log window (Window ▸ Log, ⇧⌘L) showing every USB step
-- Includes `scopelink`, a command-line tool for the same functions
+- Includes `scopectl`, a command-line tool for the same functions
 
 Firmware upgrade is deliberately left out: if it is interrupted, the scope can be left unusable.
 
@@ -35,17 +35,17 @@ Every push to `main` is built by GitHub Actions and published on the **Releases*
 ## Command-line tool
 
 ```
-scopelink info                 find the scope, test a waveform read
-scopelink screen shot.png      screenshot
-scopelink wave wave.csv        waveform samples
-scopelink key auto             press keys: run, auto, single, f1..f4, ok, up/down/left/right, ...
-scopelink keys                 list key names
-scopelink watch ~/Desktop 2    screenshot every 2 seconds
-scopelink raw 03 e0            send any command and hex-dump the reply (for exploring)
+scopectl info                 find the scope, test a waveform read
+scopectl screen shot.png      screenshot
+scopectl wave wave.csv        waveform samples
+scopectl key auto             press keys: run, auto, single, f1..f4, ok, up/down/left/right, ...
+scopectl keys                 list key names
+scopectl watch ~/Desktop 2    screenshot every 2 seconds
+scopectl raw 03 e0            send any command and hex-dump the reply (for exploring)
 ```
 
 Options: `-v` USB details, `--1ch` single-channel model, `--rgb` alternative colour order.
-Inside the app bundle it is at `ScopeLink.app/Contents/MacOS/scopelink`; the zip also has a copy.
+Inside the app bundle it is at `ScopeLink.app/Contents/MacOS/scopectl`; the zip also has a copy.
 
 ## Protocol
 
