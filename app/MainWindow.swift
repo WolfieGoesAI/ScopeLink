@@ -108,10 +108,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         for r in 0..<3 { arrows.row(at: r).height = 24 }
         arrows.xPlacement = .center
         arrows.yPlacement = .center
-        for g in [grid, arrows] {
-            g.setContentHuggingPriority(.required, for: .vertical)
-            g.setContentHuggingPriority(.required, for: .horizontal)
-        }
+        for c in 0..<3 { grid.column(at: c).width = 92 }
+        for r in 0..<grid.numberOfRows { grid.row(at: r).height = 22 }
         let volts = NSStackView(views: [keyButton("V", 0x08, width: 60), keyButton("mV", 0x09, width: 60)])
         let time = NSStackView(views: [keyButton("s", 0x0A, width: 60), keyButton("ns", 0x0B, width: 60)])
         let panel = NSStackView(views: [sectionLabel("FRONT PANEL"), grid,
@@ -132,10 +130,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             content.addSubview(v)
         }
         content.addSubview(screenView)
+        top.setHuggingPriority(.required, for: .vertical)
         panel.setHuggingPriority(.required, for: .vertical)
         panel.setHuggingPriority(.required, for: .horizontal)
+        // The screen is the part that gives way when the window is small.
         let screenBottom = screenView.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -14)
-        screenBottom.priority = .defaultHigh
+        screenBottom.priority = NSLayoutConstraint.Priority(rawValue: 600)
         NSLayoutConstraint.activate([
             top.topAnchor.constraint(equalTo: content.topAnchor, constant: 12),
             top.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 14),
@@ -151,6 +151,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             fKeys.heightAnchor.constraint(equalTo: screenView.heightAnchor, multiplier: 0.8),
 
             panel.leadingAnchor.constraint(equalTo: fKeys.trailingAnchor, constant: 16),
+            panel.widthAnchor.constraint(greaterThanOrEqualToConstant: 3 * 92 + 2 * 6),
             panel.topAnchor.constraint(equalTo: screenView.topAnchor),
             panel.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -14),
             panel.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -14),
